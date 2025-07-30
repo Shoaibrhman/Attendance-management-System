@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Attendance Management System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center; /* Center align the main title */
+            margin: 0; /* Remove default margin */
+        }
+
+        h2 {
+            color: #333;
+            text-align: left; /* Align subtitles to the left */
+            margin: 20px 0 0 0; /* Add space above the subtitle */
+        }
+
+        .form-section {
+            margin-bottom: 20px;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error {
+            color: red;
+            margin-top: 5px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .nav-buttons button {
+            width: 48%;
+        }
+
+        .show-password {
+            margin-left: 5px; /* Add some space between the input and the label */
+            cursor: pointer; /* Change cursor to pointer for better UX */
+            color: blue; /* Change color to indicate it's clickable */
+            text-decoration: underline; /* Underline to indicate it's a link */
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>~~~ Attendance Management</h1> <!-- Updated title to split into two lines -->
+    <h1>System ~~~</h1> <!-- Second line of the title -->
+
+    <!-- Page 1: Teacher Login -->
+    <div id="page-1" class="page">
+        <h2>Teacher Login</h2>
+        <input type="text" id="username" placeholder="Username" required />
+        <div style="display: flex; align-items: center;"> <!-- Flex container for password input and label -->
+            <input type="password" id="password" placeholder="Password" required style="flex: 1;" />
+            <span class="show-password" onclick="togglePassword()">Show</span> <!-- Show feature added -->
+        </div>
+        <button onclick="login()">Login</button>
+        <div id="loginMessage" class="error"></div>
+    </div>
+
+    <!-- Page 2: Add Student -->
+    <div id="page-2" class="page hidden">
+        <h2>Add Student</h2>
+        <input type="text" id="studentName" placeholder="Student Name" />
+        <input type="number" id="rollNumber" placeholder="Roll Number" />
+        <input type="number" id="numCourses" placeholder="Enter the number of courses (1 to 6)" />
+        <div id="courseInputs"></div>
+        <button onclick="addStudent()">Add Student</button>
+
+        <div class="nav-buttons">
+            <button onclick="nextPage()">Next</button> <!-- Previous button removed -->
+        </div>
+        <div id="addStudentMessage" class="error"></div>
+    </div>
+
+    <!-- Page 3: Mark Attendance -->
+    <div id="page-3" class="page hidden">
+        <h2>Mark Attendance</h2>
+        <input type="number" id="attendanceRollNumber" placeholder="Roll Number" />
+        <input type="text" id="attendanceCourse" placeholder="Course" />
+        <input type="date" id="attendanceDate" />
+        <select id="attendanceStatus">
+            <option value="true">Present</option>
+            <option value="false">Absent</option>
+        </select>
+        <button onclick="markAttendance()">Mark Attendance</button>
+        <div id="attendanceError" class="error"></div>
+
+        <div class="nav-buttons">
+            <button onclick="prevPage()">Previous</button>
+            <button onclick="nextPage()">Next</button>
+        </div>
+    </div>
+
+    <!-- Page 4: Show Student Info by Roll Number -->
+    <div id="page-4" class="page hidden">
+        <h2>Show Student Info by Roll Number</h2>
+        <input type="number" id="infoRollNumber" placeholder="Roll Number" />
+        <button onclick="showStudentsInfoByRollNumber()">Show Info</button>
+        <div id="studentsInfo"></div>
+
+        <div class="nav-buttons">
+            <button onclick="prevPage()">Previous</button>
+            <button onclick="nextPage()">Next</button>
+        </div>
+    </div>
+
+    <!-- Page 5: Show Attendance Info by Course -->
+    <div id="page-5" class="page hidden">
+        <h2>Show Attendance Info by Course</h2>
+        <input type="text" id="attendanceCourseName" placeholder="Course Name" />
+        <button onclick="showAttendanceInfoByCourse()">Show Attendance</button>
+        <div id="attendanceInfo"></div>
+        <div id="courseError" class="error"></div>
+
+        <div class="nav-buttons">
+            <button onclick="prevPage()">Previous</button>
+            <button onclick="nextPage()">Next</button>
+        </div>
+    </div>
+
+    <!-- Page 6: Save and Exit -->
+    <div id="page-6" class="page hidden">
+        <h2>Save and Exit</h2>
+        <button onclick="saveAndExit()">Save and Exit</button>
+        <div id="exitMessage" style="margin-top: 20px; font-weight: bold;"></div>
+        <div class="nav-buttons">
+            <button onclick="prevPage()">Previous</button> <!-- Previous button retained on this page -->
+        </div>
+    </div>
+</div>
+
+<script>
+    let students = []; // Resetting the students array
+    let isLoggedIn = false; // Resetting the login status
+    let currentPage = 1; // Resetting the current page
+    const totalPages = 6; // Total pages remain unchanged
+
+    // Clear saved data from localStorage
+    localStorage.removeItem('students'); // Remove any existing student data from localStorage
+
+    // Show the current page, hide others
+    function showCurrentPage() {
+        for (let i = 1; i <= totalPages; i++) {
+            const page = document.getElementById(`page-${i}`);
+            if (i === currentPage) {
+                page.classList.remove('hidden');
+            } else {
+                page.classList.add('hidden');
+            }
+        }
+        clearMessages();
+    }
+
+    // Navigate to next page
+    function nextPage() {
+        if(currentPage < totalPages) {
+            currentPage++;
+            showCurrentPage();
+        }
+    }
+
+    // Navigate to previous page
+    function prevPage() {
+        if(currentPage > 2) { // Previous not available on login page (page 1)
+            currentPage--;
+            showCurrentPage();
+        }
+    }
+
+    // Clear messages/errors from pages
+    function clearMessages() {
+        document.getElementById('loginMessage').innerText = '';
+        document.getElementById('addStudentMessage').innerText = '';
+        document.getElementById('attendanceError').innerText = '';
+        document.getElementById('studentsInfo').innerHTML = '';
+        document.getElementById('attendanceInfo').innerHTML = '';
+        document.getElementById('courseError').innerText = '';
+        document.getElementById('exitMessage').innerText = '';
+    }
+
+    // Login function
+    function login() {
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+
+        if (username === "Teacher.QAU" && password === "Quaidian") {
+            isLoggedIn = true;
+            currentPage = 2; // Move to Add Student page
+            showCurrentPage();
+        } else {
+            document.getElementById('loginMessage').innerText = 'Invalid credentials. Please try again.';
+        }
+    }
+
+    // Show course inputs dynamically
+    function showCourseInputs() {
+        const numCoursesInput = document.getElementById('numCourses');
+        if(!numCoursesInput) return;
+        const numCourses = parseInt(numCoursesInput.value);
+        const courseInputsDiv = document.getElementById('courseInputs');
+        courseInputsDiv.innerHTML = '';
+
+        if(isNaN(numCourses) || numCourses < 1 || numCourses > 6) {
+            return;
+        }
+
+        for (let i = 1; i <= numCourses; i++) {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.id = `course${i}`;
+            input.placeholder = `Course ${i}`;
+            input.required = true;
+            input.style.marginTop = '5px';
+            courseInputsDiv.appendChild(input);
+        }
+    }
+
+    // Add student function
+    function addStudent() {
+        const name = document.getElementById('studentName').value.trim();
+        const rollNo = document.getElementById('rollNumber').value.trim();
+        const numCourses = parseInt(document.getElementById('numCourses').value);
+        const errorDiv = document.getElementById('addStudentMessage');
+
+        errorDiv.innerText = '';
+
+        if (!name) {
+            errorDiv.innerText = 'Please enter student name.';
+            return;
+        }
+        if (!rollNo) {
+            errorDiv.innerText = 'Please enter roll number.';
+            return;
+        }
+        if (!numCourses || numCourses < 1 || numCourses > 6) {
+            errorDiv.innerText = 'Please enter a number of courses between 1 and 6.';
+            return;
+        }
+
+        // Check for existing roll number
+        if (students.some(student => student.rollNo === rollNo)) {
+            errorDiv.innerText = `Roll number ${rollNo} already exists.`;
+            return;
+        }
+
+        const courses = [];
+        for (let i = 1; i <= numCourses; i++) {
+            const courseInput = document.getElementById(`course${i}`);
+            if (!courseInput || !courseInput.value.trim()) {
+                errorDiv.innerText = `Please enter course ${i}.`;
+                return;
+            }
+            courses.push(courseInput.value.trim());
+        }
+
+        students.push({
+            name,
+            rollNo,
+            courses,
+            attendanceRecords: {}
+        });
+
+        alert('Student added successfully!');
+        clearInputs();
+    }
+
+    // Mark attendance function with roll number error message
+    function markAttendance() {
+        const rollNo = document.getElementById('attendanceRollNumber').value.trim();
+        const course = document.getElementById('attendanceCourse').value.trim();
+        const date = document.getElementById('attendanceDate').value;
+        const present = document.getElementById('attendanceStatus').value === 'true';
+        const attendanceErrorDiv = document.getElementById('attendanceError');
+        attendanceErrorDiv.innerText = '';
+
+        if (!rollNo || !course || !date) {
+            attendanceErrorDiv.innerText = 'Please fill in all fields.';
+            return;
+        }
+
+        const student = students.find(s => s.rollNo === rollNo);
+
+        if (!student) {
+            attendanceErrorDiv.innerHTML = `<span style="color: red;">No Student found with Roll Number: ${rollNo}. Incorrect Roll Number.</span>`;
+            return;
+        }
+
+        if (!student.courses.includes(course)) {
+            attendanceErrorDiv.innerHTML = `<span style="color: red;">Student is not enrolled in course: ${course}</span>`;
+            return; // Do not mark attendance if course incorrect
+        }
+
+        if (!student.attendanceRecords[course]) {
+            student.attendanceRecords[course] = {};
+        }
+
+        student.attendanceRecords[course][date] = present;
+        alert('Attendance marked successfully!');
+    }
+
+    // Show student info by roll number with red error message for incorrect roll no.
+    function showStudentsInfoByRollNumber() {
+        const rollNo = document.getElementById('infoRollNumber').value.trim();
+        const infoDiv = document.getElementById('studentsInfo');
+        infoDiv.innerHTML = '';
+
+        if (!rollNo) {
+            infoDiv.innerHTML = '<span style="color:red;">Please enter a roll number.</span>';
+            return;
+        }
+
+        const student = students.find(s => s.rollNo === rollNo);
+
+        if (!student) {
+            infoDiv.innerHTML = `<span style="color:red;">No Student found with Roll Number: ${rollNo}. Incorrect Roll Number.</span>`;
+            return;
+        }
+
+        infoDiv.innerHTML += `<strong>Name:</strong> ${student.name}<br>`;
+        infoDiv.innerHTML += `<strong>Roll Number:</strong> ${student.rollNo}<br>`;
+        infoDiv.innerHTML += `<strong>Courses:</strong> ${student.courses.join(', ')}<br>`;
+
+        // Attendance weightage only
+        student.courses.forEach(course => {
+            const records = student.attendanceRecords[course] || {};
+            const totalClasses = Object.keys(records).length;
+            const presentCount = Object.values(records).filter(p => p).length;
+            const weightage = totalClasses > 0 ? (100 * presentCount / totalClasses) : 0;
+            infoDiv.innerHTML += `<strong>Attendance Weightage for ${course}:</strong> ${weightage.toFixed(2)}%<br>`;
+        });
+    }
+
+    // Show attendance info by course
+    function showAttendanceInfoByCourse() {
+        const courseName = document.getElementById('attendanceCourseName').value.trim();
+        const infoDiv = document.getElementById('attendanceInfo');
+        const courseErrorDiv = document.getElementById('courseError');
+        infoDiv.innerHTML = '';
+        courseErrorDiv.innerText = '';
+
+        if (!courseName) {
+            courseErrorDiv.innerText = 'Please enter a course name.';
+            return;
+        }
+
+        const enrolledStudents = students.filter(student => student.courses.includes(courseName));
+        if (enrolledStudents.length === 0) {
+            courseErrorDiv.innerHTML = `<span style="color:red;">No Student found with Course: ${courseName}.</span>`;
+            return;
+        }
+
+        enrolledStudents.forEach(student => {
+            infoDiv.innerHTML += `<strong>Student:</strong> ${student.name} (Roll No: ${student.rollNo})<br>`;
+            const records = student.attendanceRecords[courseName] || {};
+            for (const [date, present] of Object.entries(records)) {
+                const formattedDate = new Date(date).toLocaleDateString('en-US');
+                infoDiv.innerHTML += `Date: ${formattedDate} - ${present ? 'Present' : 'Absent'}<br>`;
+            }
+            infoDiv.innerHTML += '<br>';
+        });
+    }
+
+    // Save and Exit
+    function saveAndExit() {
+        localStorage.setItem('students', JSON.stringify(students));
+        const exitMessageDiv = document.getElementById('exitMessage');
+        exitMessageDiv.innerText = 'Data saved. Exiting...';
+        currentPage = 1; // Go back to login page
+        showCurrentPage();
+        // Simulate exit by disabling further input and buttons
+        disableAllInputs();
+    }
+
+    // Disable all inputs and buttons after exit
+    function disableAllInputs() {
+        const allInputs = document.querySelectorAll('input, select, button');
+        allInputs.forEach(el => el.disabled = true);
+    }
+
+    // Clear inputs after adding student
+    function clearInputs() {
+        document.getElementById('studentName').value = '';
+        document.getElementById('rollNumber').value = '';
+        document.getElementById('numCourses').value = '';
+        document.getElementById('courseInputs').innerHTML = '';
+        document.getElementById('attendanceRollNumber').value = '';
+        document.getElementById('attendanceCourse').value = '';
+        document.getElementById('attendanceDate').value = '';
+        document.getElementById('infoRollNumber').value = '';
+        document.getElementById('attendanceCourseName').value = '';
+        document.getElementById('studentsInfo').innerHTML = '';
+        document.getElementById('attendanceInfo').innerHTML = '';
+        document.getElementById('attendanceError').innerText = '';
+        document.getElementById('addStudentMessage').innerText = '';
+        document.getElementById('loginMessage').innerText = '';
+        document.getElementById('exitMessage').innerText = '';
+        document.getElementById('courseError').innerText = '';
+    }
+
+    // Toggle password visibility
+    function togglePassword() {
+        const passwordInput = document.getElementById('password');
+        const showPasswordLabel = document.querySelector('.show-password');
+        if (passwordInput.type === "password") {
+            passwordInput.type = "text";
+            showPasswordLabel.innerText = "Hide"; // Change label text to "Hide"
+        } else {
+            passwordInput.type = "password";
+            showPasswordLabel.innerText = "Show"; // Change label text to "Show"
+        }
+    }
+
+    // Event listener for dynamic course input fields
+    document.getElementById('numCourses').addEventListener('input', showCourseInputs);
+
+    // Initially show login page only
+    showCurrentPage();
+</script>
+</body>
+</html>
